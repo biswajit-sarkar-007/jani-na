@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
   Briefcase, Plus, X, MapPin, Clock, Users, DollarSign,
   Calendar, FileText, Loader2, Navigation, AlertCircle,
-  CheckCircle2, PlayCircle, XCircle, ChevronRight
+  CheckCircle2, PlayCircle, XCircle, ChevronRight, ChevronDown, User, Phone
 } from 'lucide-react';
 
 const STATUS_CONFIG = {
@@ -22,6 +22,166 @@ const defaultForm = {
   wage: '',
   description: '',
   location: '',
+};
+
+const JobCard = ({ job, idx }) => {
+  const [expanded, setExpanded] = useState(false);
+  const [applicants, setApplicants] = useState([]);
+  const [loadingApps, setLoadingApps] = useState(false);
+  const [actionLoading, setActionLoading] = useState(null);
+
+  const fetchApplicants = async () => {
+    try {
+      setLoadingApps(true);
+      const res = await fetch(`http://localhost:5000/applications/job/${job._id}`);
+      const data = await res.json();
+      if (data.success) {
+        setApplicants(data.applications);
+      }
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoadingApps(false);
+    }
+  };
+
+  const toggleExpand = () => {
+    const next = !expanded;
+    setExpanded(next);
+    if (next && applicants.length === 0) {
+      fetchApplicants();
+    }
+  };
+
+  const handleAction = async (appId, action) => {
+    try {
+      setActionLoading(appId);
+      const res = await fetch(`http://localhost:5000/applications/${appId}/${action}`, {
+        method: 'PUT'
+      });
+      const data = await res.json();
+      if (data.success) {
+        setApplicants(prev => prev.map(a => a._id === appId ? { ...a, status: data.application.status } : a));
+      }
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
+  const statusCfg = STATUS_CONFIG[job.status] || STATUS_CONFIG['Open'];
+  const StatusIcon = statusCfg.icon;
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 16 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ delay: idx * 0.05 }}
+      className="group bg-white/[0.03] hover:bg-white/[0.06] border border-white/5 hover:border-cyan-500/20 rounded-2xl transition-all duration-300 overflow-hidden"
+    >
+      <div className="flex items-start gap-5 p-5 cursor-pointer" onClick={toggleExpand}>
+        <div className="w-12 h-12 rounded-xl bg-cyan-500/10 flex items-center justify-center shrink-0 mt-0.5">
+          <Briefcase className="w-6 h-6 text-cyan-400" />
+        </div>
+        <div className="flex-1 min-w-0">
+          <div className="flex items-start justify-between gap-3">
+            <h3 className="font-semibold text-white text-lg leading-tight">{job.title}</h3>
+            <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold border shrink-0 ${statusCfg.bg} ${statusCfg.color} ${statusCfg.border}`}>
+              <StatusIcon className="w-3.5 h-3.5" />
+              {job.status}
+            </span>
+          </div>
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 mt-2">
+            <span className="flex items-center gap-1.5 text-slate-400 text-sm">
+              <MapPin className="w-3.5 h-3.5 text-slate-500" />
+              <span className="truncate max-w-xs">{job.location}</span>
+            </span>
+            <span className="flex items-center gap-1.5 text-slate-400 text-sm">
+              <Calendar className="w-3.5 h-3.5 text-slate-500" />
+              {job.date}
+            </span>
+            <span className="flex items-center gap-1.5 text-slate-400 text-sm">
+              <Users className="w-3.5 h-3.5 text-slate-500" />
+              {job.workersCount} workers
+            </span>
+            <span className="flex items-center gap-1.5 text-slate-400 text-sm">
+              <DollarSign className="w-3.5 h-3.5 text-slate-500" />
+              ₹{job.wage}
+            </span>
+          </div>
+          {job.description && (
+            <p className="text-slate-500 text-sm mt-2 line-clamp-2">{job.description}</p>
+          )}
+        </div>
+        <button className="w-8 h-8 rounded-lg bg-white/5 flex items-center justify-center shrink-0 mt-2 text-slate-400">
+          {expanded ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
+        </button>
+      </div>
+
+      <AnimatePresence>
+        {expanded && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: 'auto', opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            className="border-t border-white/5 bg-black/20"
+          >
+            <div className="p-5">
+              <h4 className="text-sm font-semibold text-slate-300 mb-4 flex items-center gap-2">
+                <Users className="w-4 h-4 text-cyan-400" /> Applicants for this Job
+              </h4>
+              {loadingApps ? (
+                <div className="flex justify-center py-4">
+                  <Loader2 className="w-5 h-5 text-cyan-400 animate-spin" />
+                </div>
+              ) : applicants.length === 0 ? (
+                <p className="text-slate-500 text-sm text-center py-4">No applicants yet.</p>
+              ) : (
+                <div className="space-y-3">
+                  {applicants.map(app => (
+                    <div key={app._id} className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 bg-white/5 border border-white/10 rounded-xl">
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <span className="font-medium text-white">{app.workerName}</span>
+                          {app.status === 'pending' && <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-amber-500/20 text-amber-400 border border-amber-500/20 uppercase tracking-wider">Pending</span>}
+                          {app.status === 'accepted' && <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-500/20 text-emerald-400 border border-emerald-500/20 uppercase tracking-wider">Accepted</span>}
+                          {app.status === 'rejected' && <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-red-500/20 text-red-400 border border-red-500/20 uppercase tracking-wider">Rejected</span>}
+                        </div>
+                        <div className="flex items-center gap-4 mt-1.5">
+                          <span className="flex items-center gap-1 text-xs text-slate-400"><MapPin className="w-3 h-3" /> {app.workerLocation || 'N/A'}</span>
+                          <span className="flex items-center gap-1 text-xs text-slate-400"><DollarSign className="w-3 h-3" /> ₹{app.wageExpectation || job.wage}</span>
+                          <span className="flex items-center gap-1 text-xs text-slate-400"><Phone className="w-3 h-3" /> {app.workerPhone}</span>
+                        </div>
+                      </div>
+                      {app.status === 'pending' && (
+                        <div className="flex items-center gap-2 shrink-0">
+                          <button 
+                            disabled={actionLoading === app._id}
+                            onClick={() => handleAction(app._id, 'accept')}
+                            className="px-4 py-1.5 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 text-sm font-medium rounded-lg border border-emerald-500/20 transition-colors disabled:opacity-50"
+                          >
+                            Accept
+                          </button>
+                          <button 
+                            disabled={actionLoading === app._id}
+                            onClick={() => handleAction(app._id, 'reject')}
+                            className="px-4 py-1.5 bg-red-500/10 hover:bg-red-500/20 text-red-400 text-sm font-medium rounded-lg border border-red-500/20 transition-colors disabled:opacity-50"
+                          >
+                            Reject
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </motion.div>
+  );
 };
 
 const EmployerDashboard = () => {
@@ -181,54 +341,9 @@ const EmployerDashboard = () => {
           </motion.div>
         ) : (
           <div className="space-y-4">
-            {jobs.map((job, idx) => {
-              const statusCfg = STATUS_CONFIG[job.status] || STATUS_CONFIG['Open'];
-              const StatusIcon = statusCfg.icon;
-              return (
-                <motion.div
-                  key={job._id}
-                  initial={{ opacity: 0, y: 16 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: idx * 0.05 }}
-                  className="group flex items-start gap-5 p-5 bg-white/[0.03] hover:bg-white/[0.06] border border-white/5 hover:border-cyan-500/20 rounded-2xl transition-all duration-300"
-                >
-                  <div className="w-12 h-12 rounded-xl bg-cyan-500/10 flex items-center justify-center shrink-0 mt-0.5">
-                    <Briefcase className="w-6 h-6 text-cyan-400" />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-start justify-between gap-3">
-                      <h3 className="font-semibold text-white text-lg leading-tight">{job.title}</h3>
-                      <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold border shrink-0 ${statusCfg.bg} ${statusCfg.color} ${statusCfg.border}`}>
-                        <StatusIcon className="w-3.5 h-3.5" />
-                        {job.status}
-                      </span>
-                    </div>
-                    <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 mt-2">
-                      <span className="flex items-center gap-1.5 text-slate-400 text-sm">
-                        <MapPin className="w-3.5 h-3.5 text-slate-500" />
-                        <span className="truncate max-w-xs">{job.location}</span>
-                      </span>
-                      <span className="flex items-center gap-1.5 text-slate-400 text-sm">
-                        <Calendar className="w-3.5 h-3.5 text-slate-500" />
-                        {job.date}
-                      </span>
-                      <span className="flex items-center gap-1.5 text-slate-400 text-sm">
-                        <Users className="w-3.5 h-3.5 text-slate-500" />
-                        {job.workersCount} workers
-                      </span>
-                      <span className="flex items-center gap-1.5 text-slate-400 text-sm">
-                        <DollarSign className="w-3.5 h-3.5 text-slate-500" />
-                        ₹{job.wage}
-                      </span>
-                    </div>
-                    {job.description && (
-                      <p className="text-slate-500 text-sm mt-2 line-clamp-2">{job.description}</p>
-                    )}
-                  </div>
-                  <ChevronRight className="w-5 h-5 text-slate-600 group-hover:text-slate-400 shrink-0 mt-3 transition-colors" />
-                </motion.div>
-              );
-            })}
+            {jobs.map((job, idx) => (
+              <JobCard key={job._id} job={job} idx={idx} />
+            ))}
           </div>
         )}
       </main>

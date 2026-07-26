@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
   Briefcase, MapPin, Clock, Users, DollarSign,
   Calendar, Loader2, Star, Zap, TrendingUp, Navigation2,
-  ChevronDown, ChevronUp, AlertCircle, Search
+  ChevronDown, ChevronUp, AlertCircle, Search, CheckCircle2, XCircle
 } from 'lucide-react';
 
 const getStatusStyle = (status) => {
@@ -28,8 +28,46 @@ const ScoreBadge = ({ score }) => {
   );
 };
 
-const JobCard = ({ job, index }) => {
+const JobCard = ({ job, index, workerPhone, workerName, onApplySuccess }) => {
   const [expanded, setExpanded] = useState(false);
+  const [wageExpectation, setWageExpectation] = useState(job.wage);
+  const [applying, setApplying] = useState(false);
+  const [applyError, setApplyError] = useState('');
+  const [applied, setApplied] = useState(false);
+
+  const handleApply = async () => {
+    if (!workerPhone || !workerName) {
+      setApplyError('Worker session not found');
+      return;
+    }
+    setApplying(true);
+    setApplyError('');
+    try {
+      const location = localStorage.getItem('workerLocation') || '';
+      const res = await fetch('http://localhost:5000/applications', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          jobId: job._id,
+          workerPhone,
+          workerName,
+          workerLocation: location,
+          wageExpectation: Number(wageExpectation) || job.wage
+        })
+      });
+      const data = await res.json();
+      if (data.success) {
+        setApplied(true);
+        if (onApplySuccess) onApplySuccess();
+      } else {
+        setApplyError(data.error || 'Failed to apply');
+      }
+    } catch (err) {
+      setApplyError('Failed to connect to server');
+    } finally {
+      setApplying(false);
+    }
+  };
 
   return (
     <motion.div
@@ -124,9 +162,38 @@ const JobCard = ({ job, index }) => {
                 <p className="text-xs text-slate-500 mb-1 font-medium uppercase tracking-wider">Work Description</p>
                 <p className="text-slate-300 text-sm leading-relaxed">{job.description}</p>
               </div>
-              <div className="pt-2">
-                <button className="w-full py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold rounded-xl transition-colors shadow-lg shadow-indigo-500/20">
-                  Apply for this Job
+              <div className="pt-2 space-y-3">
+                {applyError && (
+                  <div className="p-2 bg-red-500/10 border border-red-500/20 rounded-lg text-red-400 text-xs flex items-center gap-1.5">
+                    <AlertCircle className="w-3.5 h-3.5" />
+                    {applyError}
+                  </div>
+                )}
+                {!applied && (
+                  <div>
+                    <label className="block text-xs font-medium text-slate-400 mb-1.5">Your Wage Expectation (₹/day)</label>
+                    <div className="relative">
+                      <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                        <DollarSign className="w-3.5 h-3.5 text-slate-500" />
+                      </div>
+                      <input
+                        type="number"
+                        value={wageExpectation}
+                        onChange={(e) => setWageExpectation(e.target.value)}
+                        className="w-full pl-9 pr-3 py-2 bg-white/5 border border-white/10 rounded-xl text-white text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/50"
+                      />
+                    </div>
+                  </div>
+                )}
+                <button 
+                  onClick={handleApply}
+                  disabled={applying || applied}
+                  className={`w-full py-2.5 text-white text-sm font-semibold rounded-xl transition-colors shadow-lg flex justify-center items-center gap-2 ${
+                    applied ? 'bg-emerald-600 hover:bg-emerald-700 shadow-emerald-500/20' 
+                    : 'bg-indigo-600 hover:bg-indigo-700 shadow-indigo-500/20 disabled:opacity-50'
+                  }`}
+                >
+                  {applying ? <Loader2 className="w-4 h-4 animate-spin" /> : applied ? <><CheckCircle2 className="w-4 h-4" /> Applied</> : 'Apply for this Job'}
                 </button>
               </div>
             </div>
@@ -146,6 +213,8 @@ const WorkerDashboard = () => {
   const [error, setError] = useState('');
   const [serverWorkerName, setServerWorkerName] = useState('');
   const [search, setSearch] = useState('');
+  const [applications, setApplications] = useState([]);
+  const [loadingApps, setLoadingApps] = useState(true);
 
   const fetchJobs = async () => {
     if (!workerPhone) {
@@ -174,7 +243,24 @@ const WorkerDashboard = () => {
 
   useEffect(() => {
     fetchJobs();
+    fetchApplications();
   }, []);
+
+  const fetchApplications = async () => {
+    if (!workerPhone) return;
+    try {
+      setLoadingApps(true);
+      const res = await fetch(`http://localhost:5000/applications/worker/${encodeURIComponent(workerPhone)}`);
+      const data = await res.json();
+      if (data.success) {
+        setApplications(data.applications);
+      }
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoadingApps(false);
+    }
+  };
 
   const displayName = serverWorkerName || workerName;
   const filteredJobs = jobs.filter(j =>
@@ -274,10 +360,44 @@ const WorkerDashboard = () => {
         ) : (
           <div className="space-y-4">
             {filteredJobs.map((job, i) => (
-              <JobCard key={job._id} job={job} index={i} />
+              <JobCard key={job._id} job={job} index={i} workerPhone={workerPhone} workerName={displayName} onApplySuccess={fetchApplications} />
             ))}
           </div>
         )}
+
+        {/* My Applications Section */}
+        <div className="mt-12">
+          <h2 className="text-xl font-bold text-white mb-4">My Applications</h2>
+          {loadingApps ? (
+            <div className="flex justify-center items-center h-24">
+              <Loader2 className="w-6 h-6 text-indigo-400 animate-spin" />
+            </div>
+          ) : applications.length === 0 ? (
+            <div className="p-6 bg-white/[0.02] border border-white/5 rounded-2xl text-center">
+              <p className="text-slate-400 text-sm">You haven't applied to any jobs yet.</p>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {applications.map(app => (
+                <div key={app._id} className="p-4 bg-white/[0.03] border border-white/5 rounded-2xl flex items-center justify-between gap-4">
+                  <div className="min-w-0">
+                    <h4 className="text-white font-medium text-sm truncate">{app.jobId?.title || 'Unknown Job'}</h4>
+                    <div className="flex items-center gap-2 mt-1">
+                      <span className="flex items-center gap-1 text-slate-400 text-xs">
+                        <MapPin className="w-3 h-3" /> {app.jobId?.location || 'Unknown Location'}
+                      </span>
+                    </div>
+                  </div>
+                  <div>
+                    {app.status === 'pending' && <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-amber-500/10 text-amber-400 border border-amber-500/20"><Clock className="w-3 h-3" /> Pending</span>}
+                    {app.status === 'accepted' && <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-emerald-500/10 text-emerald-400 border border-emerald-500/20"><CheckCircle2 className="w-3 h-3" /> Accepted</span>}
+                    {app.status === 'rejected' && <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-red-500/10 text-red-400 border border-red-500/20"><XCircle className="w-3 h-3" /> Rejected</span>}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
       </main>
     </div>
   );
