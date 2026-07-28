@@ -299,8 +299,7 @@ app.post('/applications', async (req, res) => {
     });
     await app.save();
 
-    // Notify Employer
-    const msg = `[Jani-Na] Worker ${workerName} from ${workerLocation || 'nearby'} (Wage: ₹${wageExpectation || job.wage}/day) applied for '${job.title}'. Reply exactly 0 to ACCEPT or 1 to REJECT.`;
+    const msg = `[Jeebika] Worker ${workerName} from ${workerLocation || 'nearby'} (Wage: ₹${wageExpectation || job.wage}/day) applied for '${job.title}'. Reply exactly 0 to ACCEPT or 1 to REJECT.`;
     await sendSMS(job.employerPhone, msg);
 
     res.status(201).json({ success: true, application: app });
@@ -335,7 +334,7 @@ app.put('/applications/:id/accept', async (req, res) => {
     const app = await Application.findByIdAndUpdate(req.params.id, { status: 'accepted' }, { new: true }).populate('jobId');
     if (!app) return res.status(404).json({ error: 'Application not found' });
 
-    const msg = `[Jani-Na] Congratulations! Your application for '${app.jobId.title}' has been ACCEPTED by the employer. Please check your dashboard for details.`;
+    const msg = `[Jeebika] Congratulations! Your application for '${app.jobId.title}' has been ACCEPTED by the employer. Please check your dashboard for details.`;
     await sendSMS(app.workerPhone, msg);
 
     res.json({ success: true, application: app });
@@ -349,7 +348,7 @@ app.put('/applications/:id/reject', async (req, res) => {
     const app = await Application.findByIdAndUpdate(req.params.id, { status: 'rejected' }, { new: true }).populate('jobId');
     if (!app) return res.status(404).json({ error: 'Application not found' });
 
-    const msg = `[Jani-Na] Your application for '${app.jobId.title}' has been declined. Keep looking — more opportunities are available on your dashboard!`;
+    const msg = `[Jeebika] Your application for '${app.jobId.title}' has been declined. Keep looking — more opportunities are available on your dashboard!`;
     await sendSMS(app.workerPhone, msg);
 
     res.json({ success: true, application: app });
@@ -421,7 +420,7 @@ app.post('/sms-reply', async (req, res) => {
       await latestApp.save();
       console.log(`✅ ACCEPTED ${latestApp.workerName}'s application`);
 
-      const workerMsg = `[Jani-Na] Congratulations! Your application for '${latestApp.jobId.title}' has been ACCEPTED.`;
+      const workerMsg = `[Jeebika] Congratulations! Your application for '${latestApp.jobId.title}' has been ACCEPTED.`;
       await sendSMS(latestApp.workerPhone, workerMsg);
 
       twiml.message(`You have ACCEPTED ${latestApp.workerName}'s application for '${latestApp.jobId.title}'.`);
@@ -430,7 +429,7 @@ app.post('/sms-reply', async (req, res) => {
       await latestApp.save();
       console.log(`❌ REJECTED ${latestApp.workerName}'s application`);
 
-      const workerMsg = `[Jani-Na] Your application for '${latestApp.jobId.title}' has been declined. Keep looking on your dashboard!`;
+      const workerMsg = `[Jeebika] Your application for '${latestApp.jobId.title}' has been declined. Keep looking on your dashboard!`;
       await sendSMS(latestApp.workerPhone, workerMsg);
 
       twiml.message(`You have REJECTED ${latestApp.workerName}'s application for '${latestApp.jobId.title}'.`);

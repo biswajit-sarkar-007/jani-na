@@ -3,6 +3,8 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { ArrowLeft, Phone, CheckCircle2, User, MapPin, Loader2, Sparkles, AlertCircle, Navigation } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
+const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000';
+
 const WorkerRegistration = () => {
   const navigate = useNavigate();
   const [step, setStep] = useState(1);
@@ -34,7 +36,7 @@ const WorkerRegistration = () => {
     }
 
     try {
-      const response = await fetch('http://localhost:5000/send-otp', {
+      const response = await fetch(`${BACKEND_URL}/send-otp`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ phone: formattedPhone }),
@@ -60,7 +62,7 @@ const WorkerRegistration = () => {
     setError('');
 
     try {
-      const response = await fetch('http://localhost:5000/verify-otp', {
+      const response = await fetch(`${BACKEND_URL}/verify-otp`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ phone, otp }),
@@ -86,7 +88,7 @@ const WorkerRegistration = () => {
     setError('');
 
     try {
-      const response = await fetch('http://localhost:5000/register', {
+      const response = await fetch(`${BACKEND_URL}/register`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

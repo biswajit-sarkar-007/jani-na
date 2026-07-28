@@ -13,6 +13,8 @@ const STATUS_CONFIG = {
   'Cancelled': { color: 'text-red-400', bg: 'bg-red-500/10', border: 'border-red-500/20', icon: XCircle },
 };
 
+const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000';
+
 const defaultForm = {
   title: '',
   workersCount: '',
@@ -33,7 +35,7 @@ const JobCard = ({ job, idx }) => {
   const fetchApplicants = async () => {
     try {
       setLoadingApps(true);
-      const res = await fetch(`http://localhost:5000/applications/job/${job._id}`);
+      const res = await fetch(`${BACKEND_URL}/applications/job/${job._id}`);
       const data = await res.json();
       if (data.success) {
         setApplicants(data.applications);
@@ -56,7 +58,7 @@ const JobCard = ({ job, idx }) => {
   const handleAction = async (appId, action) => {
     try {
       setActionLoading(appId);
-      const res = await fetch(`http://localhost:5000/applications/${appId}/${action}`, {
+      const res = await fetch(`${BACKEND_URL}/applications/${appId}/${action}`, {
         method: 'PUT'
       });
       const data = await res.json();
@@ -107,7 +109,7 @@ const JobCard = ({ job, idx }) => {
             </span>
             <span className="flex items-center gap-1.5 text-slate-400 text-sm">
               <DollarSign className="w-3.5 h-3.5 text-slate-500" />
-              ₹{job.wage}
+              {job.wage}
             </span>
           </div>
           {job.description && (
@@ -156,14 +158,14 @@ const JobCard = ({ job, idx }) => {
                       </div>
                       {app.status === 'pending' && (
                         <div className="flex items-center gap-2 shrink-0">
-                          <button 
+                          <button
                             disabled={actionLoading === app._id}
                             onClick={() => handleAction(app._id, 'accept')}
                             className="px-4 py-1.5 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 text-sm font-medium rounded-lg border border-emerald-500/20 transition-colors disabled:opacity-50"
                           >
                             Accept
                           </button>
-                          <button 
+                          <button
                             disabled={actionLoading === app._id}
                             onClick={() => handleAction(app._id, 'reject')}
                             className="px-4 py-1.5 bg-red-500/10 hover:bg-red-500/20 text-red-400 text-sm font-medium rounded-lg border border-red-500/20 transition-colors disabled:opacity-50"
@@ -199,7 +201,7 @@ const EmployerDashboard = () => {
   const fetchJobs = async () => {
     try {
       setLoading(true);
-      const res = await fetch(`http://localhost:5000/jobs?employerPhone=${encodeURIComponent(employerPhone)}`);
+      const res = await fetch(`${BACKEND_URL}/jobs?employerPhone=${encodeURIComponent(employerPhone)}`);
       const data = await res.json();
       if (data.success) setJobs(data.jobs);
     } catch (err) {
@@ -256,7 +258,7 @@ const EmployerDashboard = () => {
     }
     setSubmitting(true);
     try {
-      const res = await fetch('http://localhost:5000/jobs', {
+      const res = await fetch(`${BACKEND_URL}/jobs`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

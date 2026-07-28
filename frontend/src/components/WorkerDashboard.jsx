@@ -6,6 +6,8 @@ import {
   ChevronDown, ChevronUp, AlertCircle, Search, CheckCircle2, XCircle
 } from 'lucide-react';
 
+const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000';
+
 const getStatusStyle = (status) => {
   const styles = {
     'Open': 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20',
@@ -21,9 +23,9 @@ const ScoreBadge = ({ score }) => {
   const color = pct >= 70 ? 'text-emerald-400' : pct >= 40 ? 'text-amber-400' : 'text-slate-400';
   const ring = pct >= 70 ? 'ring-emerald-500/30' : pct >= 40 ? 'ring-amber-500/30' : 'ring-slate-500/30';
   return (
-    <div className={`flex items-center gap-1 text-xs font-bold ${color} ring-1 ${ring} px-2 py-0.5 rounded-full bg-white/5`}>
-      <Star className="w-3 h-3" />
-      {pct}% match
+    <div className={` `}>
+      {/* <Star className="w-3 h-3" /> */}
+      {/* {pct}% match */}
     </div>
   );
 };
@@ -44,7 +46,7 @@ const JobCard = ({ job, index, workerPhone, workerName, onApplySuccess }) => {
     setApplyError('');
     try {
       const location = localStorage.getItem('workerLocation') || '';
-      const res = await fetch('http://localhost:5000/applications', {
+      const res = await fetch(`${BACKEND_URL}/applications`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -119,7 +121,7 @@ const JobCard = ({ job, index, workerPhone, workerName, onApplySuccess }) => {
             <div className="flex flex-wrap items-center gap-x-5 gap-y-1.5 mt-2">
               <span className="flex items-center gap-1.5 text-slate-300 text-sm font-medium">
                 <DollarSign className="w-3.5 h-3.5 text-indigo-400" />
-                ₹{job.wage}/day
+                {job.wage}/day
               </span>
               <span className="flex items-center gap-1.5 text-slate-400 text-sm">
                 <Users className="w-3.5 h-3.5 text-slate-500" />
@@ -185,13 +187,12 @@ const JobCard = ({ job, index, workerPhone, workerName, onApplySuccess }) => {
                     </div>
                   </div>
                 )}
-                <button 
+                <button
                   onClick={handleApply}
                   disabled={applying || applied}
-                  className={`w-full py-2.5 text-white text-sm font-semibold rounded-xl transition-colors shadow-lg flex justify-center items-center gap-2 ${
-                    applied ? 'bg-emerald-600 hover:bg-emerald-700 shadow-emerald-500/20' 
+                  className={`w-full py-2.5 text-white text-sm font-semibold rounded-xl transition-colors shadow-lg flex justify-center items-center gap-2 ${applied ? 'bg-emerald-600 hover:bg-emerald-700 shadow-emerald-500/20'
                     : 'bg-indigo-600 hover:bg-indigo-700 shadow-indigo-500/20 disabled:opacity-50'
-                  }`}
+                    }`}
                 >
                   {applying ? <Loader2 className="w-4 h-4 animate-spin" /> : applied ? <><CheckCircle2 className="w-4 h-4" /> Applied</> : 'Apply for this Job'}
                 </button>
@@ -225,7 +226,7 @@ const WorkerDashboard = () => {
     try {
       setLoading(true);
       setError('');
-      const res = await fetch(`http://localhost:5000/worker_dashboard/${encodeURIComponent(workerPhone)}`);
+      const res = await fetch(`${BACKEND_URL}/worker_dashboard/${encodeURIComponent(workerPhone)}`);
       const data = await res.json();
       if (data.success) {
         setJobs(data.jobs);
@@ -250,7 +251,7 @@ const WorkerDashboard = () => {
     if (!workerPhone) return;
     try {
       setLoadingApps(true);
-      const res = await fetch(`http://localhost:5000/applications/worker/${encodeURIComponent(workerPhone)}`);
+      const res = await fetch(`${BACKEND_URL}/applications/worker/${encodeURIComponent(workerPhone)}`);
       const data = await res.json();
       if (data.success) {
         setApplications(data.applications);
